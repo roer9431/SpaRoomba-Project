@@ -1,4 +1,3 @@
-#define NO_LCD
 #include <Sparki.h>
 
 //odometry
@@ -17,6 +16,7 @@ bool object_sighted;
 //pathing
 float waypoint[3];
 int index_map[16], map_adj[16][4], path[10];
+int master_plan[16];
 
 void setup() {
   true_setup();
@@ -29,7 +29,7 @@ void loop() {
   //if (scouting) {scout();}
   if (thinking) {think();}
   if (planning) {plan();}
-  //display();
+  display();
   get_pos();
   check_status();
   int t_end = millis();
@@ -350,8 +350,8 @@ void true_setup() {
   moving = false;
   scouting = true;
   mapping = false;
-  thinking = false;   //set to true for full code
-  planning = false;   //set to true for full code, also uncomment the moving part of check_status
+  thinking = true;   //set to true for full code
+  planning = true;   //set to true for full code, also uncomment the moving part of check_status
 
   done = false;
 }
