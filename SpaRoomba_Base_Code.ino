@@ -118,8 +118,15 @@ void get_pos(){
 
   facing = pos[2] - pi*gaze/180;
 
+  map_pos_prev[0] = map_pos[0];
+  map_pos_prev[1] = map_pos[1];
+  
   map_pos[0] = (int)(pos[0]/grid_size);
-  map_pos[1] = (int)(pos[1]/grid_size);
+  map_pos[1] = (int)(pos[1]/grid_size); 
+  
+  if (map_pos_prev[0] != map_pos[0] || map_pos_prev[1] != map_pos[1]) {
+    env_map[map_pos[0]][map_pos[1]] += 1;
+  }
 }
 
 void get_relative_pos() {
@@ -306,22 +313,22 @@ void true_setup() {
   object_sighted = false;
 
   grid_size = 14;   //distance across one grid square in cm
-  env_map[0][0] = 0;
+  env_map[0][0] = 1;
   env_map[0][1] = 1;
-  env_map[0][2] = 0;
+  env_map[0][2] = 1;
   env_map[0][3] = 1;
   env_map[1][0] = 1;
   env_map[1][1] = 1;
-  env_map[1][2] = 0;
+  env_map[1][2] = 1;
   env_map[1][3] = 1;
-  env_map[2][0] = 0;
+  env_map[2][0] = 1;
   env_map[2][1] = 1;
   env_map[2][2] = 1;
   env_map[2][3] = 1;
   env_map[3][0] = 1;
   env_map[3][1] = 1;
-  env_map[3][2] = 0;
-  env_map[3][3] = 0;
+  env_map[3][2] = 1;
+  env_map[3][3] = 1;
 
   pos[0] = (grid_size/2);
   pos[1] = (grid_size/2) + (grid_size*3);
