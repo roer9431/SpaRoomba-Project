@@ -6,7 +6,7 @@ float dist_d, theta_d, facing;
 //constants
 float pi;
 //mapping
-int grid_size, env_map[4][4], goal[2], map_pos[2];
+int grid_size, env_map[4][4], goal[2], map_pos[2], map_pos_old[2];
 //control flow
 int loop_time, display_counter;
 bool moving, scouting, mapping, thinking, planning, done;
@@ -16,7 +16,6 @@ bool object_sighted;
 //pathing
 float waypoint[3];
 int index_map[16], map_adj[16][4], path[10];
-int master_plan[16];
 
 void setup() {
   true_setup();
@@ -25,6 +24,7 @@ void setup() {
 
 void loop() {
   int t_start = millis();
+  set_goal();
   if (moving) {move_arc();}
   //if (scouting) {scout();}
   if (thinking) {think();}
@@ -44,7 +44,7 @@ void check_status() {
   if (done) {
     moving = false;
     sparki.moveStop();
-    sparki.beep(random(1, 4)*100);
+    //sparki.beep(random(1, 4)*100);
   }
 }
 
@@ -62,7 +62,10 @@ void display(){
     sparki.print(pos[1]);
     sparki.print(",");
     sparki.println(pos[2]);
-    sparki.print("");
+    sparki.println("X, Y Goal");
+    sparki.print(goal[0]);
+    sparki.print(",");
+    sparki.print(goal[1]);
   }
   else if (display_counter < timer*2) {
     int stow = env_map[map_pos[0]][map_pos[1]];
@@ -107,6 +110,21 @@ void display(){
   if (display_counter == 2*timer) {display_counter = 0;}
 }
 
+int get_distance(int goal_index, int current_index) {
+  int vessel = 9999;
+  bool horizontal = abs(goal_index - current_index) == 1 && 
+                    abs(goal_index%4 - current_index%4) != 3;
+  bool vertical = abs(goal_index - current_index) == 4;
+  if (vertical || horizontal) {
+    int x1 = goal_index%4;
+    int y1 = goal_index/4;
+    int x2 = current_index%4;
+    int y2 = current_index/4;
+    if (env_map[x1][y1] >= 1 && env_map[x2][y2] >= 1) {vessel = env_map[x1][y1];}
+  }
+  return vessel;
+}
+
 void get_pos(){
   float avg_speed = w_speed * (w_l + w_r) / 200;
   pos[0] += cos(pos[2]) * avg_speed * loop_time;
@@ -117,9 +135,16 @@ void get_pos(){
   if (pos[2] < -1*pi) {pos[2] += 2*pi;}
 
   facing = pos[2] - pi*gaze/180;
+  
+  map_pos_old[0] = map_pos[0];
+  map_pos_old[1] = map_pos[1];
 
   map_pos[0] = (int)(pos[0]/grid_size);
   map_pos[1] = (int)(pos[1]/grid_size);
+  
+  if (map_pos_old[0] != map_pos[0] || map_pos_old[1] != map_pos[1]) {
+    env_map[map_pos_old[0]][map_pos_old[1]] += 99;
+  }
 }
 
 void get_relative_pos() {
@@ -208,6 +233,12 @@ void plan() {
 
 void scout() {
   sparki.servo(gaze++);
+  if(gaze>30){
+    gaze=-30;
+  }   
+  int cm = sparki.ping();
+/*
+  sparki.servo(gaze++);
   if(gaze>30){ 
     if (object_sighted){
       object_sighted = false;
@@ -231,6 +262,34 @@ void scout() {
     object_sighted = false;
     object_placement[object][1] = (object_placement[object][2] + object_placement[object][3]) / 2;
   }
+*/
+}
+
+void set_goal() {
+  if (map_pos[0] == goal[0] && map_pos[1] == goal[1]){
+    int x_goal = map_pos[0];
+    int y_goal = map_pos[1];
+    do {
+      if ((map_pos[0] == 0 && (map_pos[1] == 1 || map_pos[1] == 3))
+        || (map_pos[0] == 3) && (map_pos[1] == 0 || map_pos[1] == 2))) 
+        y_goal++;
+      }
+      else if (map_pos[1] == 1 || map_pos[1] == 3) {
+        x_goal--;
+      }
+      else {
+        x_goal++;
+      }
+    }
+    while (env_map[x_goal][y_goal] == 0 || env_map[x_goal][y_goal] > 1);
+    goal[0] = x_goal;
+    goal[1] = y_goal;
+  }
+  //goal[] => 0 is x, 1 is y
+  //
+  //check if at goal
+  //if so, pop from set next goal
+  //if popped location is an obstacle, pop another
 }
 
 void think() {
@@ -306,32 +365,36 @@ void true_setup() {
   object_sighted = false;
 
   grid_size = 14;   //distance across one grid square in cm
-  env_map[0][0] = 0;
+  
+  //for the env_map there are three states with corresponding values
+  // open: 1, visited: 100, and obstacle: 0
+  
+  env_map[0][0] = 1;
   env_map[0][1] = 1;
-  env_map[0][2] = 0;
+  env_map[0][2] = 1;
   env_map[0][3] = 1;
-  env_map[1][0] = 1;
+  env_map[1][0] = 0;
   env_map[1][1] = 1;
-  env_map[1][2] = 0;
+  env_map[1][2] = 1;
   env_map[1][3] = 1;
-  env_map[2][0] = 0;
+  env_map[2][0] = 1;
   env_map[2][1] = 1;
-  env_map[2][2] = 1;
+  env_map[2][2] = 0;
   env_map[2][3] = 1;
   env_map[3][0] = 1;
   env_map[3][1] = 1;
-  env_map[3][2] = 0;
-  env_map[3][3] = 0;
+  env_map[3][2] = 1;
+  env_map[3][3] = 1;
 
   pos[0] = (grid_size/2);
-  pos[1] = (grid_size/2) + (grid_size*3);
+  pos[1] = (grid_size/2);// + (grid_size*3);
   pos[2] = 0;
   map_pos[0] = 0;
-  map_pos[1] = 3;
+  map_pos[1] = 0;
   waypoint[0] = pos[0];
   waypoint[1] = pos[1];
   waypoint[2] = pos[2];
-  goal[0] = 1;
+  goal[0] = 0;
   goal[1] = 0;
 
   path[0] = -1;
@@ -350,25 +413,9 @@ void true_setup() {
   moving = false;
   scouting = true;
   mapping = false;
-  thinking = true;   //set to true for full code
-  planning = true;   //set to true for full code, also uncomment the moving part of check_status
+  thinking = true;
+  planning = true;
 
   done = false;
 }
 
-//----------------------------------helper functions
-
-int get_distance(int goal_index, int current_index) {
-  int vessel = 99;
-  bool horizontal = abs(goal_index - current_index) == 1 && 
-                    abs(goal_index%4 - current_index%4) != 3;
-  bool vertical = abs(goal_index - current_index) == 4;
-  if (vertical || horizontal) {
-    int x1 = goal_index%4;
-    int y1 = goal_index/4;
-    int x2 = current_index%4;
-    int y2 = current_index/4;
-    if (env_map[x1][y1] == 1 && env_map[x2][y2] == 1) {vessel = 1;}
-  }
-  return vessel;
-}
